@@ -510,7 +510,7 @@ class PhotoFragment : ViewPagerFragment() {
             .run {
                 if (mCurrentRotationDegrees != 0) {
                     transform(Rotate(mCurrentRotationDegrees))
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
                 } else {
                     this
                 }
@@ -520,7 +520,12 @@ class PhotoFragment : ViewPagerFragment() {
             .load(path)
             .apply(options)
             .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>,
+                    isFirstResource: Boolean
+                ): Boolean {
                     resetColorModeIfVisible()
                     if (activity != null && !activity!!.isDestroyed && !activity!!.isFinishing) {
                         tryLoadingWithPicasso(addZoomableView)
@@ -537,7 +542,8 @@ class PhotoFragment : ViewPagerFragment() {
                 ): Boolean {
                     applyProperColorMode(resource)
                     val allowZoomingImages = context?.config?.allowZoomingImages ?: true
-                    binding.gesturesView.controller.settings.isZoomEnabled = mMedium.isRaw() || mCurrentRotationDegrees != 0 || allowZoomingImages == false
+                    binding.gesturesView.controller.settings.isZoomEnabled =
+                        mMedium.isRaw() || mCurrentRotationDegrees != 0 || allowZoomingImages == false
                     if (mIsFragmentVisible && addZoomableView) {
                         scheduleZoomableView()
                     }
@@ -547,7 +553,8 @@ class PhotoFragment : ViewPagerFragment() {
     }
 
     private fun tryLoadingWithPicasso(addZoomableView: Boolean) {
-        var pathToLoad = if (getFilePathToShow().startsWith("content://")) getFilePathToShow() else "file://${getFilePathToShow()}"
+        var pathToLoad =
+            if (getFilePathToShow().startsWith("content://")) getFilePathToShow() else "file://${getFilePathToShow()}"
         pathToLoad = pathToLoad.replace("%", "%25").replace("#", "%23")
 
         try {
@@ -597,7 +604,8 @@ class PhotoFragment : ViewPagerFragment() {
         if (files != null) {
             val screenWidth = requireContext().realScreenSize.x
             val itemWidth =
-                resources.getDimension(R.dimen.portrait_photos_stripe_height).toInt() + resources.getDimension(org.fossify.commons.R.dimen.one_dp)
+                resources.getDimension(R.dimen.portrait_photos_stripe_height)
+                    .toInt() + resources.getDimension(org.fossify.commons.R.dimen.one_dp)
                     .toInt()
             val sideWidth = screenWidth / 2 - itemWidth / 2
             val fakeItemsCnt = ceil(sideWidth / itemWidth.toDouble()).toInt()
@@ -659,7 +667,9 @@ class PhotoFragment : ViewPagerFragment() {
     }
 
     private fun setupStripeBottomMargin() {
-        var bottomMargin = requireContext().navigationBarHeight + resources.getDimension(org.fossify.commons.R.dimen.normal_margin).toInt()
+        var bottomMargin =
+            requireContext().navigationBarHeight + resources.getDimension(org.fossify.commons.R.dimen.normal_margin)
+                .toInt()
         if (requireContext().config.bottomActions) {
             bottomMargin += resources.getDimension(R.dimen.bottom_actions_height).toInt()
         }
@@ -706,7 +716,8 @@ class PhotoFragment : ViewPagerFragment() {
         }
     }
 
-    private fun getFilePathToShow() = if (mMedium.isPortrait()) mCurrentPortraitPhotoPath else getPathToLoad(mMedium)
+    private fun getFilePathToShow() =
+        if (mMedium.isPortrait()) mCurrentPortraitPhotoPath else getPathToLoad(mMedium)
 
     private fun openPanorama() {
         TODO("Panorama is not yet implemented.")
@@ -764,8 +775,10 @@ class PhotoFragment : ViewPagerFragment() {
                         }
                     )
 
-                    val useWidth = if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sHeight else sWidth
-                    val useHeight = if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sWidth else sHeight
+                    val useWidth =
+                        if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sHeight else sWidth
+                    val useHeight =
+                        if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sWidth else sHeight
                     doubleTapZoomScale = getDoubleTapZoomScale(useWidth, useHeight)
                 }
 
@@ -815,7 +828,8 @@ class PhotoFragment : ViewPagerFragment() {
             } else {
                 File(mMedium.path).inputStream()
             }.use {
-                val imageParser = JpegImageParser().getXmpXml(ByteSourceInputStream(it, mMedium.name), HashMap<String, Any>())
+                val imageParser =
+                    JpegImageParser().getXmpXml(ByteSourceInputStream(it, mMedium.name), HashMap<String, Any>())
                 imageParser.contains("GPano:UsePanoramaViewer=\"True\"", true) ||
                     imageParser.contains("<GPano:UsePanoramaViewer>True</GPano:UsePanoramaViewer>", true) ||
                     imageParser.contains("GPano:FullPanoWidthPixels=") ||
@@ -857,7 +871,8 @@ class PhotoFragment : ViewPagerFragment() {
                 val inputStream = requireContext().contentResolver.openInputStream(uri)
                 val exif2 = ExifInterface()
                 exif2.readExif(inputStream, ExifInterface.Options.OPTION_ALL)
-                orient = exif2.getTag(ExifInterface.TAG_ORIENTATION)?.getValueAsInt(defaultOrientation) ?: defaultOrientation
+                orient =
+                    exif2.getTag(ExifInterface.TAG_ORIENTATION)?.getValueAsInt(defaultOrientation) ?: defaultOrientation
             }
         } catch (ignored: Exception) {
         } catch (ignored: OutOfMemoryError) {
@@ -961,7 +976,8 @@ class PhotoFragment : ViewPagerFragment() {
     private fun getExtendedDetailsY(height: Int): Float {
         val smallMargin = context?.resources?.getDimension(org.fossify.commons.R.dimen.small_margin) ?: return 0f
         val fullscreenOffset = smallMargin + if (mIsFullscreen) 0 else requireContext().navigationBarHeight
-        val actionsHeight = if (requireContext().config.bottomActions && !mIsFullscreen) resources.getDimension(R.dimen.bottom_actions_height) else 0f
+        val actionsHeight =
+            if (requireContext().config.bottomActions && !mIsFullscreen) resources.getDimension(R.dimen.bottom_actions_height) else 0f
         return requireContext().realScreenSize.y - height - actionsHeight - fullscreenOffset
     }
 
