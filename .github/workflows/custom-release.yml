@@ -1,0 +1,68 @@
+name: Custom Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: true
+        default: 'main'
+  push:
+    tags:
+      - '*'  # Trigger on all tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          sdk-version: '33'
+          build-tools-version: '33.0.2'
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Build Release APK
+        run: |
+          ./gradlew assembleRelease \
+            -PAPP_ID=io.github.subpub.gallery \
+            -PCUSTOM_APP_NAME=thitta
+
+      - name: Sign APK
+        run: |
+          jarsigner -verbose -keystore ${{ secrets.KEYSTORE_PATH }} \
+            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
+            -keypass ${{ secrets.KEY_PASSWORD }} \
+            app/build/outputs/apk/release/app-release-unsigned.apk ${{ secrets.KEY_ALIAS }}
+
+      - name: Optimize APK with zipalign
+        run: |
+          $ANDROID_SDK_ROOT/build-tools/33.0.2/zipalign -v -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/app-release-signed-aligned.apk
+
+      - name: Upload Artifact for Testing Builds
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release-signed-aligned-${{ github.ref_name }}.apk
+          path: app/build/outputs/apk/release/app-release-signed-aligned.apk
+
+      - name: Upload Clean APK for Tagged Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v3
+        with:
+          name: thitta-${{ github.ref_name }}.apk
+          path: app/build/outputs/apk/release/app-release-signed-aligned.apk
