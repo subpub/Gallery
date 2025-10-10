@@ -39,6 +39,8 @@
         <item quantity="other">Are you sure you want to restore %d files?</item>
     </plurals>
     <string name="full_storage_permission_required">Fossify Gallery needs full access to display all your photos and videos. Go to Settings > Permissions > Photos and videos > Allow all.</string>
+    <string name="pixel_mode_on_session">Pixel mode ON for this session!</string>
+    <string name="pixel_mode_off">Pixel mode OFF!</string>
 
     <!-- Filter -->
     <string name="filter_media">Filter media</string>

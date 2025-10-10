@@ -20,6 +20,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.RelativeLayout
+import android.widget.Toast
 import androidx.core.graphics.drawable.toBitmapOrNull
 import androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180
 import androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270
@@ -90,6 +91,7 @@ import org.fossify.gallery.helpers.SHOULD_INIT_FRAGMENT
 import org.fossify.gallery.helpers.WEIRD_TILE_DPI
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.svg.SvgSoftwareLayerSetter
+import pl.droidsonroids.gif.GifDrawable
 import pl.droidsonroids.gif.InputSource
 import java.io.File
 import java.io.FileOutputStream
@@ -134,6 +136,80 @@ class PhotoFragment : ViewPagerFragment() {
     private lateinit var binding: PagerPhotoItemBinding
     private lateinit var mMedium: Medium
 
+    // START of Pixel Mode implementation
+    /**
+     * Applies the current anti-aliasing state (Pixel Mode) to the appropriate image view.
+     * This version is improved to handle multiple drawable types, not just static bitmaps.
+     * Disabling anti-alias and bitmap filtering is key to rendering pixel art without blur.
+     */
+    private fun updateAntiAliasingState() {
+        val antiAliasEnabled = !ViewPagerActivity.isPixelModeEnabled
+        var viewToInvalidate: View? = null
+
+        // Handle the main GestureImageView, which displays most formats
+        val gesturesDrawable = binding.gesturesView.drawable
+        when (gesturesDrawable) {
+            is BitmapDrawable -> {
+                gesturesDrawable.paint.isAntiAlias = antiAliasEnabled
+                gesturesDrawable.paint.isFilterBitmap = antiAliasEnabled
+                viewToInvalidate = binding.gesturesView
+            }
+
+            is WebPDrawable -> {
+                gesturesDrawable.paint.isAntiAlias = antiAliasEnabled
+                gesturesDrawable.paint.isFilterBitmap = antiAliasEnabled
+                viewToInvalidate = binding.gesturesView
+            }
+
+            is APNGDrawable -> {
+                gesturesDrawable.paint.isAntiAlias = antiAliasEnabled
+                gesturesDrawable.paint.isFilterBitmap = antiAliasEnabled
+                viewToInvalidate = binding.gesturesView
+            }
+
+            is AVIFDrawable -> {
+                gesturesDrawable.paint.isAntiAlias = antiAliasEnabled
+                gesturesDrawable.paint.isFilterBitmap = antiAliasEnabled
+                viewToInvalidate = binding.gesturesView
+            }
+        }
+
+        // Handle the GifImageView separately
+        val gifDrawable = binding.gifView.drawable
+        if (gifDrawable is GifDrawable) {
+            gifDrawable.paint.isAntiAlias = antiAliasEnabled
+            gifDrawable.paint.isFilterBitmap = antiAliasEnabled
+            viewToInvalidate = binding.gifView
+        }
+
+        // Force the view to redraw with new paint settings, if a change was made
+        viewToInvalidate?.invalidate()
+
+        // Note: SubsamplingScaleImageView handles its own rendering of tiles.
+        // A simple paint flag toggle won't work here without deeper changes to its rendering pipeline.
+    }
+
+    /**
+     * Toggles Pixel Mode and shows a Toast notification.
+     * This is the core logic triggered by the user's long-press action.
+     */
+    private fun togglePixelMode() {
+        // 1. Toggle the session-wide flag
+        ViewPagerActivity.isPixelModeEnabled = !ViewPagerActivity.isPixelModeEnabled
+
+        // 2. Apply the new state to the currently visible image
+        updateAntiAliasingState()
+
+        // 3. Show a Toast notification with strings from resources for translation
+        val messageResId = if (ViewPagerActivity.isPixelModeEnabled) {
+            R.string.pixel_mode_on_session
+        } else {
+            R.string.pixel_mode_off
+        }
+        Toast.makeText(requireContext(), messageResId, Toast.LENGTH_SHORT).show()
+    }
+    // END of Pixel Mode implementation
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
         val activity = requireActivity()
@@ -152,6 +228,18 @@ class PhotoFragment : ViewPagerFragment() {
             subsamplingView.setOnClickListener { photoClicked() }
             gesturesView.setOnClickListener { photoClicked() }
             gifView.setOnClickListener { photoClicked() }
+
+            // START of Pixel Mode implementation: Add long-press listeners
+            // A single long-press handler for all interactive image views.
+            val longClickListener = View.OnLongClickListener {
+                togglePixelMode()
+                true // Consume the event
+            }
+            subsamplingView.setOnLongClickListener(longClickListener)
+            gesturesView.setOnLongClickListener(longClickListener)
+            gifView.setOnLongClickListener(longClickListener)
+            // END of Pixel Mode implementation
+
             instantPrevItem.setOnClickListener { listener?.goToPrevItem() }
             instantNextItem.setOnClickListener { listener?.goToNextItem() }
             panoramaOutline.setOnClickListener { openPanorama() }
@@ -443,6 +531,11 @@ class PhotoFragment : ViewPagerFragment() {
                 gifViewFrame.beVisible()
                 ensureBackgroundThread {
                     gifView.setInputSource(source)
+                    activity?.runOnUiThread {
+                        // START of Pixel Mode implementation: Apply state after loading
+                        updateAntiAliasingState()
+                        // END of Pixel Mode implementation
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -466,6 +559,9 @@ class PhotoFragment : ViewPagerFragment() {
         if (context != null) {
             val drawable = APNGDrawable.fromFile(mMedium.path)
             binding.gesturesView.setImageDrawable(drawable)
+            // START of Pixel Mode implementation: Apply state after loading
+            updateAntiAliasingState()
+            // END of Pixel Mode implementation
         }
     }
 
@@ -478,6 +574,9 @@ class PhotoFragment : ViewPagerFragment() {
             }
 
             binding.gesturesView.setImageDrawable(drawable)
+            // START of Pixel Mode implementation: Apply state after loading
+            updateAntiAliasingState()
+            // END of Pixel Mode implementation
         }
     }
 
@@ -493,6 +592,9 @@ class PhotoFragment : ViewPagerFragment() {
                 loadWithGlide(path, addZoomableView)
             } else {
                 binding.gesturesView.setImageDrawable(drawable)
+                // START of Pixel Mode implementation: Apply state after loading
+                updateAntiAliasingState()
+                // END of Pixel Mode implementation
             }
         } else {
             loadWithGlide(path, addZoomableView)
@@ -540,6 +642,10 @@ class PhotoFragment : ViewPagerFragment() {
                     dataSource: DataSource,
                     isFirstResource: Boolean
                 ): Boolean {
+                    // START of Pixel Mode implementation: Apply state in Glide callback
+                    // This is implicitly called after the drawable is set by .into()
+                    updateAntiAliasingState()
+                    // END of Pixel Mode implementation
                     applyProperColorMode(resource)
                     val allowZoomingImages = context?.config?.allowZoomingImages ?: true
                     binding.gesturesView.controller.settings.isZoomEnabled =
@@ -572,6 +678,9 @@ class PhotoFragment : ViewPagerFragment() {
 
             picasso.into(binding.gesturesView, object : Callback {
                 override fun onSuccess() {
+                    // START of Pixel Mode implementation: Apply state in Picasso callback
+                    updateAntiAliasingState()
+                    // END of Pixel Mode implementation
                     applyProperColorMode(binding.gesturesView.drawable)
                     binding.gesturesView.controller.settings.isZoomEnabled =
                         mMedium.isRaw() || mCurrentRotationDegrees != 0 || context?.config?.allowZoomingImages == false

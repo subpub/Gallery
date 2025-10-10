@@ -193,7 +193,12 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
     companion object {
         private const val REQUEST_VIEW_VIDEO = 1
         private const val SAVED_PATH = "current_path"
-    }
+     // This companion object holds the session-based state for anti-aliasing.
+     // 'isPixelModeEnabled' is a static property that persists only as long as the app process is alive.
+     // It defaults to 'false', ensuring anti-aliasing is ON at every app launch.
+        var isPixelModeEnabled = false
+     }
+
 
     private var mPath = ""
     private var mDirectory = ""
